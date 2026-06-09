@@ -1,0 +1,730 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block badge %}Gestão{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── SUMMARY CARDS ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .summary-card {
+    background: var(--gc-white);
+    border: 1px solid var(--gc-gray-100);
+    border-radius: var(--radius);
+    padding: 20px 18px;
+  }
+  .summary-card .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gc-gray-500);
+    margin-bottom: 6px;
+  }
+  .summary-card .value {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--gc-green);
+    line-height: 1;
+  }
+  .summary-card .sub {
+    font-size: 12px;
+    color: var(--gc-gray-500);
+    margin-top: 4px;
+  }
+
+  /* ── SECTION HEADING ── */
+  .dash-section {
+    margin-bottom: 28px;
+  }
+  .dash-section-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--gc-black);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── SCORES BAR ── */
+  .scores-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 600px) { .scores-grid { grid-template-columns: 1fr; } }
+
+  .score-item {
+    background: var(--gc-white);
+    border: 1px solid var(--gc-gray-100);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .score-item .score-label {
+    font-size: 13px;
+    color: var(--gc-gray-700);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .score-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .score-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: var(--gc-gray-100);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    background: var(--gc-green);
+    border-radius: 4px;
+    transition: width 0.8s ease;
+  }
+  .score-bar-val {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gc-gray-900);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* ── PEER TABLE ── */
+  .peer-table-wrap {
+    background: var(--gc-white);
+    border: 1px solid var(--gc-gray-100);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .peer-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .peer-table thead { background: var(--gc-gray-50); }
+  .peer-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gc-gray-500);
+    border-bottom: 1px solid var(--gc-gray-100);
+  }
+  .peer-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gc-gray-50);
+    color: var(--gc-gray-700);
+    vertical-align: middle;
+  }
+  .peer-table tr:last-child td { border-bottom: none; }
+  .peer-table tr:hover td { background: var(--gc-gray-50); }
+  .peer-name { font-weight: 600; color: var(--gc-black); }
+  .peer-role { font-size: 11px; color: var(--gc-gray-500); }
+
+  .score-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .score-5 { background: #d4edda; color: #1a7a2e; }
+  .score-4 { background: var(--gc-green-pale); color: var(--gc-green-dark); }
+  .score-3 { background: #fff3cd; color: #856404; }
+  .score-2 { background: #fdecea; color: #a8231b; }
+  .score-1 { background: #fdecea; color: #a8231b; }
+  .score-none { background: var(--gc-gray-100); color: var(--gc-gray-500); }
+  .no-data { font-size: 12px; color: var(--gc-gray-300); }
+
+  /* ── TEXT RESPONSES ── */
+  .responses-list { display: flex; flex-direction: column; gap: 10px; }
+  .response-item {
+    background: var(--gc-white);
+    border: 1px solid var(--gc-gray-100);
+    border-left: 3px solid var(--gc-gray-300);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--gc-gray-700);
+    line-height: 1.55;
+  }
+  .response-item.green { border-left-color: var(--gc-green); }
+  .response-item.orange { border-left-color: #E8680A; }
+  .response-meta {
+    font-size: 11px;
+    color: var(--gc-gray-300);
+    margin-top: 6px;
+  }
+
+  /* ── CHART CONTAINER ── */
+  .chart-wrap {
+    background: var(--gc-white);
+    border: 1px solid var(--gc-gray-100);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .chart-wrap canvas { max-height: 280px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--gc-gray-100); }
+  .tab-btn {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gc-gray-500);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s;
+  }
+  .tab-btn.active { color: var(--gc-green); border-bottom-color: var(--gc-green); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── EXPORT ── */
+  .export-bar {
+    background: var(--gc-white);
+    border: 1px solid var(--gc-gray-100);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .export-bar p { font-size: 13px; color: var(--gc-gray-700); }
+  .export-bar a {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gc-green);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .export-bar a:hover { text-decoration: underline; }
+
+  /* ── DANGER ZONE ── */
+  .danger-zone {
+    background: var(--gc-white);
+    border: 1px solid #FCA5A5;
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .danger-zone p { font-size: 13px; color: var(--gc-gray-700); }
+  .danger-zone p strong { color: #991B1B; }
+  .btn-danger {
+    font-size: 12px;
+    font-weight: 700;
+    color: #DC2626;
+    background: none;
+    border: 1.5px solid #FCA5A5;
+    border-radius: var(--radius);
+    padding: 7px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-danger:hover { background: #FEF2F2; border-color: #DC2626; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--gc-white);
+    border-radius: var(--radius);
+    padding: 32px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    color: #991B1B;
+    margin-bottom: 10px;
+  }
+  .modal p { font-size: 14px; color: var(--gc-gray-700); margin-bottom: 20px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; padding: 11px; border-radius: var(--radius); font-size: 13px; font-weight: 700; cursor: pointer; border: none; text-transform: uppercase; letter-spacing: 0.06em; }
+  .modal-cancel { background: var(--gc-gray-100); color: var(--gc-gray-700); }
+  .modal-cancel:hover { background: var(--gc-gray-300); }
+  .modal-confirm { background: #DC2626; color: #fff; }
+  .modal-confirm:hover { background: #B91C1C; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container--wide">
+
+  <div class="page-heading" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div>
+      <p class="eyebrow">Ciclo 2026 · 1º Semestre</p>
+      <h1>Dashboard de Gestão</h1>
+      <p>Resultados da pesquisa de clima e avaliações de pares</p>
+    </div>
+  </div>
+
+  <!-- Export bar -->
+  <div class="export-bar">
+    <p>💾 Exporte todos os dados brutos para análise externa</p>
+    <a href="/api/export?token={{ token }}">Exportar JSON →</a>
+  </div>
+
+  <!-- Danger zone -->
+  <div class="danger-zone">
+    <p><strong>⚠️ Zona de Perigo</strong> — Limpa todos os feedbacks e avaliações de pares. Use para encerrar um ciclo antes de iniciar o próximo.</p>
+    <button class="btn-danger" onclick="document.getElementById('resetModal').classList.add('open')">Resetar dados</button>
+  </div>
+
+  <!-- Modal de confirmação -->
+  <div class="modal-overlay" id="resetModal">
+    <div class="modal">
+      <h2>⚠️ Confirmar reset</h2>
+      <p>Esta ação vai apagar <strong>permanentemente</strong> todos os feedbacks e avaliações de pares. Ela não pode ser desfeita.<br><br>Recomende exportar os dados antes de continuar.</p>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="document.getElementById('resetModal').classList.remove('open')">Cancelar</button>
+        <button class="modal-confirm" id="confirmResetBtn" onclick="doReset()">Sim, apagar tudo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="label">Feedbacks</div>
+      <div class="value">{{ total_feedback }}</div>
+      <div class="sub">respostas gerais</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Avaliações</div>
+      <div class="value">{{ total_peer }}</div>
+      <div class="sub">avaliações de pares</div>
+    </div>
+    {% if averages.score_empresa %}
+    <div class="summary-card">
+      <div class="label">Empresa</div>
+      <div class="value">{{ averages.score_empresa }}</div>
+      <div class="sub">média / 5.0</div>
+    </div>
+    {% endif %}
+    {% if averages.score_equipe %}
+    <div class="summary-card">
+      <div class="label">Equipe Sistemas</div>
+      <div class="value">{{ averages.score_equipe }}</div>
+      <div class="sub">média / 5.0</div>
+    </div>
+    {% endif %}
+    {% if averages.score_infra %}
+    <div class="summary-card">
+      <div class="label">Infra</div>
+      <div class="value">{{ averages.score_infra }}</div>
+      <div class="sub">média / 5.0</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('scores')">📊 Notas Gerais</button>
+    <button class="tab-btn" onclick="switchTab('peers')">🤝 Avaliação de Pares</button>
+    <button class="tab-btn" onclick="switchTab('texts')">💬 Respostas Abertas</button>
+    <button class="tab-btn" onclick="switchTab('raw')">📋 Dados Brutos</button>
+  </div>
+
+  <!-- TAB: NOTAS GERAIS -->
+  <div id="tab-scores" class="tab-content active">
+    {% if total_feedback > 0 %}
+    <div class="chart-wrap">
+      <canvas id="radarChart"></canvas>
+    </div>
+
+    <div class="scores-grid">
+      {% set score_labels = {
+        'score_empresa': '🏢 Empresa',
+        'score_equipe': '💻 Equipe de Sistemas',
+        'score_infra': '🔧 Interação c/ Infraestrutura',
+        'score_crescimento': '📈 Crescimento Profissional',
+        'score_comunicacao': '📣 Comunicação Interna',
+        'score_clareza': '🎯 Clareza de Objetivos',
+        'score_equilibrio': '⚖️ Equilíbrio Vida/Trabalho'
+      } %}
+      {% for key, label in score_labels.items() %}
+      {% if averages[key] %}
+      <div class="score-item">
+        <div class="score-label">{{ label }}</div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-bg">
+            <div class="score-bar-fill" style="width: {{ (averages[key] / 5 * 100)|int }}%"></div>
+          </div>
+          <span class="score-bar-val">{{ averages[key] }}</span>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; color:var(--gc-gray-500); padding:48px;">
+      Nenhum feedback recebido ainda.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- TAB: AVALIAÇÃO DE PARES -->
+  <div id="tab-peers" class="tab-content">
+    {% if total_peer > 0 %}
+    <div class="chart-wrap">
+      <canvas id="peerChart"></canvas>
+    </div>
+
+    <div class="peer-table-wrap">
+      <table class="peer-table">
+        <thead>
+          <tr>
+            <th>Integrante</th>
+            <th>Avaliações</th>
+            <th>Trab. Equipe</th>
+            <th>Comprometimento</th>
+            <th>Tratamento</th>
+            <th>Média Geral</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for member in members %}
+          {% set stats = peer_stats[member] %}
+          <tr>
+            <td>
+              <div class="peer-name">{{ member }}</div>
+            </td>
+            <td>
+              {% if stats %}
+              <span style="font-weight:600; color:var(--gc-gray-900);">{{ stats.count }}</span>
+              {% else %}
+              <span class="no-data">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if stats and stats.trabalho %}
+              {% set v = stats.trabalho %}
+              <span class="score-pill score-{{ v|int }}">{{ v }}</span>
+              {% else %}<span class="no-data">—</span>{% endif %}
+            </td>
+            <td>
+              {% if stats and stats.comprometimento %}
+              {% set v = stats.comprometimento %}
+              <span class="score-pill score-{{ v|int }}">{{ v }}</span>
+              {% else %}<span class="no-data">—</span>{% endif %}
+            </td>
+            <td>
+              {% if stats and stats.tratamento %}
+              {% set v = stats.tratamento %}
+              <span class="score-pill score-{{ v|int }}">{{ v }}</span>
+              {% else %}<span class="no-data">—</span>{% endif %}
+            </td>
+            <td>
+              {% if stats and stats.geral %}
+              {% set v = stats.geral %}
+              <span class="score-pill {% if v >= 4.5 %}score-5{% elif v >= 3.5 %}score-4{% elif v >= 2.5 %}score-3{% else %}score-2{% endif %}">{{ v }}</span>
+              {% else %}<span class="no-data">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Comentários de pares por pessoa -->
+    {% for member in members %}
+    {% if peer_stats[member] and peer_stats[member].comentarios %}
+    <div class="dash-section">
+      <div class="dash-section-title" style="font-size:15px;">💬 Comentários sobre {{ member }}</div>
+      <div class="responses-list">
+        {% for c in peer_stats[member].comentarios %}
+        <div class="response-item">{{ c }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% else %}
+    <div class="card" style="text-align:center; color:var(--gc-gray-500); padding:48px;">
+      Nenhuma avaliação de pares recebida ainda.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- TAB: RESPOSTAS ABERTAS -->
+  <div id="tab-texts" class="tab-content">
+    {% set has_texts = feedbacks | selectattr('pontos_positivos') | list or
+                       feedbacks | selectattr('pontos_melhoria') | list or
+                       feedbacks | selectattr('campo_livre') | list %}
+    {% if has_texts %}
+
+    <div class="dash-section">
+      <div class="dash-section-title">✅ Pontos Positivos</div>
+      <div class="responses-list">
+        {% for f in feedbacks %}
+        {% if f.pontos_positivos %}
+        <div class="response-item green">
+          {{ f.pontos_positivos }}
+          <div class="response-meta">{{ f.timestamp }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-title">🔧 Pontos de Melhoria</div>
+      <div class="responses-list">
+        {% for f in feedbacks %}
+        {% if f.pontos_melhoria %}
+        <div class="response-item orange">
+          {{ f.pontos_melhoria }}
+          <div class="response-meta">{{ f.timestamp }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-title">💬 Campo Livre</div>
+      <div class="responses-list">
+        {% for f in feedbacks %}
+        {% if f.campo_livre %}
+        <div class="response-item">
+          {{ f.campo_livre }}
+          <div class="response-meta">{{ f.timestamp }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    {% else %}
+    <div class="card" style="text-align:center; color:var(--gc-gray-500); padding:48px;">
+      Nenhuma resposta aberta recebida ainda.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- TAB: DADOS BRUTOS -->
+  <div id="tab-raw" class="tab-content">
+    <div class="dash-section">
+      <div class="dash-section-title">Feedbacks Gerais ({{ total_feedback }})</div>
+      {% if total_feedback > 0 %}
+      <div class="peer-table-wrap" style="overflow-x:auto;">
+        <table class="peer-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Data</th>
+              <th>Empresa</th><th>Equipe</th><th>Infra</th>
+              <th>Crescimento</th><th>Comunicação</th><th>Clareza</th><th>Equilíbrio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in feedbacks %}
+            <tr>
+              <td style="color:var(--gc-gray-300);">{{ f.id }}</td>
+              <td>{{ f.timestamp[:10] }}</td>
+              <td>{{ f.score_empresa or '—' }}</td>
+              <td>{{ f.score_equipe or '—' }}</td>
+              <td>{{ f.score_infra or '—' }}</td>
+              <td>{{ f.score_crescimento or '—' }}</td>
+              <td>{{ f.score_comunicacao or '—' }}</td>
+              <td>{{ f.score_clareza or '—' }}</td>
+              <td>{{ f.score_equilibrio or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:var(--gc-gray-500); font-size:13px;">Sem dados.</p>
+      {% endif %}
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-title">Avaliações de Pares ({{ total_peer }})</div>
+      {% if total_peer > 0 %}
+      <div class="peer-table-wrap" style="overflow-x:auto;">
+        <table class="peer-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Data</th><th>Avaliado</th>
+              <th>Trab. Equipe</th><th>Comprometimento</th><th>Tratamento</th><th>Comentário</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in peers %}
+            <tr>
+              <td style="color:var(--gc-gray-300);">{{ p.id }}</td>
+              <td>{{ p.timestamp[:10] }}</td>
+              <td><strong>{{ p.avaliado }}</strong></td>
+              <td>{{ p.score_trabalho or '—' }}</td>
+              <td>{{ p.score_comprometimento or '—' }}</td>
+              <td>{{ p.score_tratamento or '—' }}</td>
+              <td style="max-width:240px; font-size:12px; color:var(--gc-gray-500);">{{ p.comentario or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:var(--gc-gray-500); font-size:13px;">Sem dados.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+  // ── Reset data ──
+  async function doReset() {
+    const btn = document.getElementById('confirmResetBtn');
+    btn.disabled = true;
+    btn.textContent = 'Apagando...';
+    try {
+      const res = await fetch('/api/reset?token={{ token }}', { method: 'POST' });
+      if (res.ok) {
+        document.getElementById('resetModal').classList.remove('open');
+        location.reload();
+      } else {
+        alert('Erro ao resetar. Tente novamente.');
+        btn.disabled = false;
+        btn.textContent = 'Sim, apagar tudo';
+      }
+    } catch {
+      alert('Erro de conexão. Tente novamente.');
+      btn.disabled = false;
+      btn.textContent = 'Sim, apagar tudo';
+    }
+  }
+
+  // ── Tab switching ──
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // ── Radar chart for general scores ──
+  const radarCtx = document.getElementById('radarChart');
+  if (radarCtx) {
+    const avgs = {
+      empresa:      {{ averages.score_empresa or 0 }},
+      equipe:       {{ averages.score_equipe or 0 }},
+      infra:        {{ averages.score_infra or 0 }},
+      crescimento:  {{ averages.score_crescimento or 0 }},
+      comunicacao:  {{ averages.score_comunicacao or 0 }},
+      clareza:      {{ averages.score_clareza or 0 }},
+      equilibrio:   {{ averages.score_equilibrio or 0 }},
+    };
+    new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: ['Empresa', 'Equipe Sistemas', 'Infra', 'Crescimento', 'Comunicação', 'Clareza', 'Equilíbrio'],
+        datasets: [{
+          label: 'Média',
+          data: Object.values(avgs),
+          backgroundColor: 'rgba(61,170,53,0.15)',
+          borderColor: '#3DAA35',
+          borderWidth: 2,
+          pointBackgroundColor: '#3DAA35',
+          pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          r: {
+            min: 0, max: 5,
+            ticks: { stepSize: 1, font: { size: 11 } },
+            grid: { color: '#F0F0F0' },
+            pointLabels: { font: { size: 12, weight: '600' } }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` Média: ${ctx.raw.toFixed(2)}`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Bar chart for peer reviews ──
+  const peerCtx = document.getElementById('peerChart');
+  if (peerCtx) {
+    const peerData = {{ peer_chart_json | safe }};
+    new Chart(peerCtx, {
+      type: 'bar',
+      data: {
+        labels: peerData.labels,
+        datasets: [
+          { label: 'Trabalho em Equipe',  data: peerData.trabalho,        backgroundColor: '#3DAA35' },
+          { label: 'Comprometimento',     data: peerData.comprometimento,  backgroundColor: '#5BC254' },
+          { label: 'Tratamento',          data: peerData.tratamento,       backgroundColor: '#E8F6E7', borderColor: '#3DAA35', borderWidth: 1 },
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { min: 0, max: 5, ticks: { stepSize: 1 } },
+          x: { ticks: { font: { size: 11 } } }
+        },
+        plugins: {
+          legend: { position: 'top' }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}
